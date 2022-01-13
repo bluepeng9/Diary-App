@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:untitled1/data/database.dart';
 import 'package:untitled1/write.dart';
 
@@ -37,6 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final dbHelper = DataBaseHelper.instance;
   Diary? todayDiary;
+  Diary? historyDiary;
 
   List<String> statusImg = [
     "assets/img/ico-weather.png",
@@ -44,15 +46,22 @@ class _MyHomePageState extends State<MyHomePage> {
     "assets/img/ico-weather_3.png",
   ];
 
+  CalendarController calendarController = CalendarController();
+  DateTime time = DateTime.now();
+  List<Diary> allDiaries = [];
+
   void getTodayDiary() async {
     List<Diary> diary =
         await dbHelper.getDiaryByDate(Utils.getFormatTime(DateTime.now()));
     if (diary.isNotEmpty) {
       todayDiary = diary.first;
     }
-    setState(() {
+    setState(() {});
+  }
 
-    });
+  void getAllDiary() async {
+    allDiaries = await dbHelper.getAllDiary();
+    setState(() {});
   }
 
   @override
@@ -67,21 +76,39 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Container(child: getPage()),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          Diary _d;
-          if (todayDiary != null) {
-            _d = todayDiary!;
+          if (selectIndex == 0) {
+            Diary _d;
+            if (todayDiary != null) {
+              _d = todayDiary!;
+            } else {
+              _d = Diary(
+                date: Utils.getFormatTime(DateTime.now()),
+                title: "",
+                memo: "",
+                status: 0,
+                image: "assets/img/b1.jpg",
+              );
+            }
+            await Navigator.of(context).push(
+                MaterialPageRoute(builder: (ctx) => DiaryWritePage(diary: _d)));
+            getTodayDiary();
           } else {
-            _d = Diary(
-              date: Utils.getFormatTime(DateTime.now()),
-              title: "",
-              memo: "",
-              status: 0,
-              image: "assets/img/b1.jpg",
-            );
+            Diary _d;
+            if (historyDiary != null) {
+              _d = todayDiary!;
+            } else {
+              _d = Diary(
+                date: Utils.getFormatTime(time),
+                title: "",
+                memo: "",
+                status: 0,
+                image: "assets/img/b1.jpg",
+              );
+            }
+            await Navigator.of(context).push(
+                MaterialPageRoute(builder: (ctx) => DiaryWritePage(diary: _d)));
+            getDiaryByDate(time);
           }
-          await Navigator.of(context).push(
-              MaterialPageRoute(builder: (ctx) => DiaryWritePage(diary: _d)));
-          getTodayDiary();
         },
         child: const Icon(Icons.add),
       ),
@@ -93,10 +120,14 @@ class _MyHomePageState extends State<MyHomePage> {
             BottomNavigationBarItem(
                 icon: Icon(Icons.insert_chart), label: "기록"),
           ],
+          currentIndex: selectIndex,
           onTap: (idx) {
             setState(() {
               selectIndex = idx;
             });
+            if (selectIndex == 2) {
+              getAllDiary();
+            }
           }),
     );
   }
@@ -171,11 +202,123 @@ class _MyHomePageState extends State<MyHomePage> {
     ));
   }
 
+  void getDiaryByDate(DateTime date) async {
+    List<Diary> d = await dbHelper.getDiaryByDate(Utils.getFormatTime(date));
+    setState(() {
+      if (d.isEmpty) {
+        historyDiary = null;
+      } else {
+        historyDiary = d.first;
+      }
+    });
+  }
+
   Widget getHistoryPage() {
-    return Container();
+    return Container(
+        child: ListView.builder(
+      itemCount: 2,
+      itemBuilder: (ctx, idx) {
+        if (idx == 0) {
+          return Container(
+            child: TableCalendar(
+              initialSelectedDay: time,
+              calendarController: calendarController,
+              onDaySelected: (date, events, holydays) {
+                time = date;
+                getDiaryByDate(date);
+                print(date);
+              },
+            ),
+          );
+        } else if (idx == 1) {
+          if (historyDiary == null) {
+            return Container();
+          }
+          return Column(
+            children: [
+              Container(
+                  margin: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${time.month}.${time.day}",
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black),
+                      ),
+                      Image.asset(statusImg[historyDiary!.status],
+                          fit: BoxFit.contain)
+                    ],
+                  )),
+              Container(
+                  margin: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  decoration: BoxDecoration(
+                      color: Colors.white54,
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        historyDiary!.title,
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Container(height: 12),
+                      Text(
+                        historyDiary!.memo,
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      Image.asset(historyDiary!.image, fit: BoxFit.cover),
+                    ],
+                  ))
+            ],
+          );
+        }
+        return Container();
+      },
+    ));
   }
 
   Widget getChartPage() {
-    return Container();
+    return Container(
+        child: ListView.builder(
+            itemCount: 2,
+            itemBuilder: (ctx, idx) {
+              if (idx == 0) {
+                return Container(
+                    margin: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(statusImg.length, (_idx) {
+                        return Container(
+                          child: Column(children: [
+                            Image.asset(statusImg[_idx], fit: BoxFit.contain),
+                            Text(
+                                "${allDiaries.where((element) => element.status == _idx).length}개"),
+                          ]),
+                        );
+                      }),
+                    ));
+              } else if (idx == 1) {
+                return Container(
+                    height: 120,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      children: List.generate(allDiaries.length, (_idx) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(horizontal: 8),
+                            height: 100,
+                            width: 100,
+                            child: Image.asset(allDiaries[_idx].image,
+                                fit: BoxFit.cover));
+                      }),
+                    ));
+              }
+              return Container();
+            }));
   }
 }
