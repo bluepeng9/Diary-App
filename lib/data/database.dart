@@ -41,10 +41,10 @@ class DataBaseHelper {
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {}
 
   //투두 입력, 수정, 불러오기
-  Future<int> insertdiary(Diary diary) async {
+  Future<int> insertDiary(Diary diary) async {
     Database? db = await instance.database;
 
-    List<Diary> d = await getdiaryByDate(diary.date);
+    List<Diary> d = await getDiaryByDate(diary.date);
 
     if (db == null) {
       return 1;
@@ -72,7 +72,7 @@ class DataBaseHelper {
     }
   }
 
-  Future<List<Diary>> getAlldiary() async {
+  Future<List<Diary>> getAllDiary() async {
     Database? db = await instance.database;
     List<Diary> diarys = [];
     if (db == null) return [];
@@ -90,7 +90,7 @@ class DataBaseHelper {
     return diarys;
   }
 
-  Future<List<Diary>> getdiaryByDate(int date) async {
+  Future<List<Diary>> getDiaryByDate(int date) async {
     Database? db = await instance.database;
     List<Diary> diarys = [];
     if (db == null) {

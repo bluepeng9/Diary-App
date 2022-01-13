@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:untitled1/data/database.dart';
+import 'package:untitled1/write.dart';
+
+import 'data/diary.dart';
+import 'data/util.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,16 +35,54 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int selectIndex = 0;
 
+  final dbHelper = DataBaseHelper.instance;
+  Diary? todayDiary;
+
+  List<String> statusImg = [
+    "assets/img/ico-weather.png",
+    "assets/img/ico-weather_2.png",
+    "assets/img/ico-weather_3.png",
+  ];
+
+  void getTodayDiary() async {
+    List<Diary> diary =
+        await dbHelper.getDiaryByDate(Utils.getFormatTime(DateTime.now()));
+    if (diary.isNotEmpty) {
+      todayDiary = diary.first;
+    }
+    setState(() {
+
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getTodayDiary();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(""),
-      ),
       body: Container(child: getPage()),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        tooltip: 'Increment',
+        onPressed: () async {
+          Diary _d;
+          if (todayDiary != null) {
+            _d = todayDiary!;
+          } else {
+            _d = Diary(
+              date: Utils.getFormatTime(DateTime.now()),
+              title: "",
+              memo: "",
+              status: 0,
+              image: "assets/img/b1.jpg",
+            );
+          }
+          await Navigator.of(context).push(
+              MaterialPageRoute(builder: (ctx) => DiaryWritePage(diary: _d)));
+          getTodayDiary();
+        },
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -58,23 +101,81 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget getPage(){
-    if (selectIndex==0){
+  Widget getPage() {
+    if (selectIndex == 0) {
       return getTodayPage();
-    }else if(selectIndex==1){
+    } else if (selectIndex == 1) {
       return getHistoryPage();
-    }else if(selectIndex==2) {
+    } else if (selectIndex == 2) {
       return getChartPage();
     }
     return Container();
   }
-  Widget getTodayPage(){
+
+  Widget getTodayPage() {
+    if (todayDiary == null) {
+      return Container(child: Text("일기 작성점"));
+    }
+    return Container(
+        child: Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(
+            todayDiary!.image,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned.fill(
+            child: ListView(
+          children: [
+            Container(
+                margin: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "${DateTime.now().month}.${DateTime.now().day}",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
+                    Image.asset(statusImg[todayDiary!.status],
+                        fit: BoxFit.contain)
+                  ],
+                )),
+            Container(
+                margin: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                    color: Colors.white54,
+                    borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      todayDiary!.title,
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Container(height: 12),
+                    Text(
+                      todayDiary!.memo,
+                      style: TextStyle(fontSize: 18),
+                    )
+                  ],
+                ))
+          ],
+        ))
+      ],
+    ));
+  }
+
+  Widget getHistoryPage() {
     return Container();
   }
-  Widget getHistoryPage(){
-    return Container();
-  }
-  Widget getChartPage(){
+
+  Widget getChartPage() {
     return Container();
   }
 }
